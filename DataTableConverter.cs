@@ -1,13 +1,21 @@
-using System.Data;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-
-namespace Serialization
+﻿namespace Serialization
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Data;
+    using System.Linq;
+    using System.Text;
+    using System.Threading.Tasks;
+    using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
+    using System.ComponentModel;
 
     /// <summary>
     /// Converts a DataTable to JSON. Note no support for deserialization
     /// </summary>
+    /// <remarks>
+    /// This is based on https://github.com/chris-herring/DataTableConverter 
+    /// </remarks>
     public class DataTableConverter : JsonConverter
     {
 
@@ -36,16 +44,16 @@ namespace Serialization
 
             DataTable table = new DataTable();
 
-            if (jObject("TableName") != null)
+            if (jObject["TableName"] != null)
             {
-                table.TableName = jObject("TableName").ToString();
+                table.TableName = jObject["TableName"].ToString();
             }
 
-            if (jObject("Columns") == null)
+            if (jObject["Columns"] == null)
                 return table;
 
             // Loop through the columns in the table and apply any properties provided
-            foreach (JObject jColumn in jObject("Columns"))
+            foreach (JObject jColumn in jObject["Columns"])
             {
                 DataColumn column = new DataColumn();
                 JToken token = default(JToken);
@@ -105,7 +113,7 @@ namespace Serialization
                 token = jColumn.SelectToken("DateTimeMode");
                 if (token != null)
                 {
-                    column.DateTimeMode = Enum.Parse(typeof(System.Data.DataSetDateTime), token.Value<string>());
+                    column.DateTimeMode = (System.Data.DataSetDateTime)Enum.Parse(typeof(System.Data.DataSetDateTime), token.Value<string>());
                 }
 
                 // Can't set default value on auto increment column
@@ -114,128 +122,7 @@ namespace Serialization
                     token = jColumn.SelectToken("DefaultValue");
                     if (token != null)
                     {
-                        // If a default value is provided then cast to the columns data type
-                        switch (column.DataType)
-                        {
-                            case typeof(System.Boolean):
-                                bool defaultValue = false;
-                                if (bool.TryParse(token.ToString(), out defaultValue))
-                                {
-                                    column.DefaultValue = defaultValue;
-                                }
-                                break;
-                            case typeof(System.Byte):
-                                byte defaultValue = 0;
-                                if (byte.TryParse(token.ToString(), out defaultValue))
-                                {
-                                    column.DefaultValue = defaultValue;
-                                }
-                                break;
-                            case typeof(System.Char):
-                                char defaultValue = '\0';
-                                if (char.TryParse(token.ToString(), out defaultValue))
-                                {
-                                    column.DefaultValue = defaultValue;
-                                }
-                                break;
-                            case typeof(System.DateTime):
-                                DateTime defaultValue = default(DateTime);
-                                if (DateTime.TryParse(token.ToString(), out defaultValue))
-                                {
-                                    column.DefaultValue = defaultValue;
-                                }
-                                break;
-                            case typeof(System.Decimal):
-                                decimal defaultValue = default(decimal);
-                                if (decimal.TryParse(token.ToString(), out defaultValue))
-                                {
-                                    column.DefaultValue = defaultValue;
-                                }
-                                break;
-                            case typeof(System.Double):
-                                double defaultValue = 0;
-                                if (double.TryParse(token.ToString(), out defaultValue))
-                                {
-                                    column.DefaultValue = defaultValue;
-                                }
-                                break;
-                            case typeof(System.Guid):
-                                Guid defaultValue = default(Guid);
-                                if (Guid.TryParse(token.ToString(), out defaultValue))
-                                {
-                                    column.DefaultValue = defaultValue;
-                                }
-                                break;
-                            case typeof(System.Int16):
-                                Int16 defaultValue = default(Int16);
-                                if (Int16.TryParse(token.ToString(), out defaultValue))
-                                {
-                                    column.DefaultValue = defaultValue;
-                                }
-                                break;
-                            case typeof(System.Int32):
-                                Int32 defaultValue = default(Int32);
-                                if (Int32.TryParse(token.ToString(), out defaultValue))
-                                {
-                                    column.DefaultValue = defaultValue;
-                                }
-                                break;
-                            case typeof(System.Int64):
-                                Int64 defaultValue = default(Int64);
-                                if (Int64.TryParse(token.ToString(), out defaultValue))
-                                {
-                                    column.DefaultValue = defaultValue;
-                                }
-                                break;
-                            case typeof(System.SByte):
-                                sbyte defaultValue = 0;
-                                if (sbyte.TryParse(token.ToString(), out defaultValue))
-                                {
-                                    column.DefaultValue = defaultValue;
-                                }
-                                break;
-                            case typeof(System.Single):
-                                float defaultValue = 0;
-                                if (float.TryParse(token.ToString(), out defaultValue))
-                                {
-                                    column.DefaultValue = defaultValue;
-                                }
-                                break;
-                            case typeof(System.String):
-                                column.DefaultValue = token.ToString();
-                                break;
-                            case typeof(System.TimeSpan):
-                                TimeSpan defaultValue = default(TimeSpan);
-                                if (TimeSpan.TryParse(token.ToString(), out defaultValue))
-                                {
-                                    column.DefaultValue = defaultValue;
-                                }
-                                break;
-                            case typeof(System.UInt16):
-                                UInt16 defaultValue = default(UInt16);
-                                if (UInt16.TryParse(token.ToString(), out defaultValue))
-                                {
-                                    column.DefaultValue = defaultValue;
-                                }
-                                break;
-                            case typeof(System.UInt32):
-                                UInt32 defaultValue = default(UInt32);
-                                if (UInt32.TryParse(token.ToString(), out defaultValue))
-                                {
-                                    column.DefaultValue = defaultValue;
-                                }
-                                break;
-                            case typeof(System.UInt64):
-                                UInt64 defaultValue = default(UInt64);
-                                if (UInt64.TryParse(token.ToString(), out defaultValue))
-                                {
-                                    column.DefaultValue = defaultValue;
-                                }
-                                break;
-                            case typeof(System.Byte[]):
-                                break;
-                            // Leave as null
-                        }
+                        column.DefaultValue = this.ConvertFromString(column.DataType, token.ToString());
                     }
                 }
 
@@ -261,9 +148,9 @@ namespace Serialization
             }
 
             // Add the rows to the table
-            if (jObject("Rows") != null)
+            if (jObject["Rows"] != null)
             {
-                foreach (JArray jRow in jObject("Rows"))
+                foreach (JArray jRow in jObject["Rows"])
                 {
                     DataRow row = table.NewRow();
                     // Each row is just an array of objects
@@ -273,10 +160,10 @@ namespace Serialization
             }
 
             // Add the primary key to the table if supplied
-            if (jObject("PrimaryKey") != null)
+            if (jObject["PrimaryKey"] != null)
             {
                 List<DataColumn> primaryKey = new List<DataColumn>();
-                foreach (JValue jPrimaryKey in jObject("PrimaryKey"))
+                foreach (JValue jPrimaryKey in jObject["PrimaryKey"])
                 {
                     DataColumn column = table.Columns[jPrimaryKey.ToString()];
                     if (column == null)
@@ -384,6 +271,37 @@ namespace Serialization
             writer.WriteEndObject();
         }
 
+        /// <summary>
+        /// Generic Try Parse 
+        /// </summary>
+        /// <typeparam name="T">The Type</typeparam>
+        /// <param name="input">The input string.</param>
+        /// <returns></returns>
+        private object ConvertFromString(Type type, string input)
+        {
+            var converter = TypeDescriptor.GetConverter(type);
+
+            try
+            {
+                if (converter != null)
+                {
+                    //Cast ConvertFromString(string text) : object to (T)
+                    return converter.ConvertFromString(input);
+                }
+            }
+            catch (NotSupportedException)
+            {
+            }
+
+            if (type.IsValueType)
+            {
+                return Activator.CreateInstance(type);
+            }
+            else
+            {
+                return null;
+            }
+        }
     }
 
 }
